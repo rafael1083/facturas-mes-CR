@@ -1,0 +1,22 @@
+# Librerías
+node_modules/
+
+# Datos Sensibles (Facturas descargadas)
+Facturas/
+facturas/
+
+# Credenciales y Configuración Local
+imap.txt
+.env
+
+# Archivos de datos locales
+proveedores.csv
+tiposComprobantes.json
+tiposXMLxSubir.json
+
+# Logs y Temporales
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store

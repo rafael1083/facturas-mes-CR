@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Multicuenta Facturas</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #0f172a;
+        }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .dashboard {
+            background-color: var(--card);
+            padding: 3rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            width: 100%;
+            max-width: 550px;
+            text-align: center;
+        }
+        h1 { color: var(--primary); font-size: 1.8rem; margin-bottom: 2rem; font-weight: 800; }
+        .form-group { margin-bottom: 1.5rem; text-align: left; }
+        label { display: block; margin-bottom: 0.6rem; font-weight: 600; font-size: 0.9rem; color: #475569; }
+        select {
+            width: 100%;
+            padding: 0.85rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+            cursor: pointer;
+        }
+        select:focus { outline: none; border-color: var(--primary); }
+        button {
+            width: 100%;
+            padding: 1rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 1rem;
+        }
+        button:hover { background-color: #1d4ed8; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3); }
+        button:disabled { background-color: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
+        #status {
+            margin-top: 2rem;
+            padding: 1.25rem;
+            border-radius: 0.75rem;
+            display: none;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            text-align: left;
+        }
+        .success { background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+        .error { background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+        .spinner { display: inline-block; width: 1.2rem; height: 1.2rem; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s linear infinite; margin-right: 0.5rem; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <h1>Sistema de Descargas</h1>
+        
+        <div class="form-group">
+            <label for="email">Seleccionar Cuenta de Correo</label>
+            <select id="email"></select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label for="mes">Mes</label>
+                <select id="mes">
+                    <option value="01">Enero</option>
+                    <option value="02">Febrero</option>
+                    <option value="03">Marzo</option>
+                    <option value="04">Abril</option>
+                    <option value="05">Mayo</option>
+                    <option value="06">Junio</option>
+                    <option value="07">Julio</option>
+                    <option value="08">Agosto</option>
+                    <option value="09">Septiembre</option>
+                    <option value="10">Octubre</option>
+                    <option value="11">Noviembre</option>
+                    <option value="12">Diciembre</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="anio">Año</label>
+                <select id="anio">
+                    <option value="2026">2026</option>
+                    <option value="2025">2025</option>
+                </select>
+            </div>
+        </div>
+
+        <button id="btnDescargar" onclick="iniciarDescarga()">Iniciar Descarga de Facturas</button>
+        
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const statusEl = document.getElementById('status');
+        const btn = document.getElementById('btnDescargar');
+        const emailSelect = document.getElementById('email');
+
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                const data = await response.json();
+                
+                emailSelect.innerHTML = data.accounts.map(acc => 
+                    `<option value="${acc.email}">${acc.email}</option>`
+                ).join('');
+
+                if(data.accounts.length > 0) {
+                    document.getElementById('mes').value = data.accounts[0].mesDefault || '01';
+                }
+                document.getElementById('anio').value = data.anioActual;
+            } catch (error) {
+                console.error('Error cargando config:', error);
+            }
+        }
+
+        async function iniciarDescarga() {
+            const email = emailSelect.value;
+            const mes = document.getElementById('mes').value;
+            const anio = document.getElementById('anio').value;
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Procesando Descarga...';
+            statusEl.style.display = 'block';
+            statusEl.className = 'success';
+            statusEl.innerHTML = `<strong>Iniciando...</strong><br>Conectando a la cuenta: ${email}<br>Buscando facturas de: ${mes}/${anio}`;
+
+            try {
+                const response = await fetch('/api/descargar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, mes, anio })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    statusEl.className = 'success';
+                    statusEl.innerHTML = `<strong>¡Éxito!</strong><br>Las facturas han sido descargadas y organizadas en:<br><i>Facturas/${email}/${anio}/${mes}/</i>`;
+                } else {
+                    statusEl.className = 'error';
+                    statusEl.innerHTML = `<strong>Error en el proceso</strong><br>${data.detalle || data.error}`;
+                }
+            } catch (error) {
+                statusEl.className = 'error';
+                statusEl.innerHTML = `<strong>Error de Red</strong><br>No se pudo contactar con el servidor local.`;
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Iniciar Descarga de Facturas';
+            }
+        }
+
+        loadConfig();
+    </script>
+</body>
+</html>
