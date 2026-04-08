@@ -1,4 +1,4 @@
-# Sistema de Procesamiento de Facturas Electrónicas (Costa Rica) 🇨🇷
+# Sistema de Procesamiento y Descarga de Facturas Electrónicas (Costa Rica) 🇨🇷
 
 Este proyecto es una herramienta automatizada construida con **Node.js** para descargar, clasificar y respaldar facturas electrónicas directamente desde una cuenta de correo electrónico (Gmail) utilizando el protocolo **IMAP**.
 
