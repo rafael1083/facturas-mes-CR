@@ -43,7 +43,9 @@ app.get("/api/config", (req, res) => {
   }
 });
 
-// Iniciar descarga para una cuenta específica
+const { spawn } = require("child_process");
+
+// Iniciar descarga para una cuenta específica con STREAMING de logs
 app.post("/api/descargar", (req, res) => {
   const { email, mes, anio } = req.body;
   
@@ -57,22 +59,94 @@ app.post("/api/descargar", (req, res) => {
 
     const [u, p] = account.split(",");
     
-    // Ejecutamos el script pasando los argumentos: email password mes
-    // El año lo manejamos internamente en el script o podríamos pasarlo también
     console.log(`Iniciando descarga para ${email} - Periodo: ${mes}/${anio}...`);
     
-    const command = `node facturasFinal.js "${u}" "${p}" "${mes}"`;
-    
-    exec(command, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Error: ${error.message}`);
-        return res.status(500).json({ error: "Error en la ejecución", detalle: error.message });
-      }
-      res.json({ mensaje: "Descarga completada con éxito", logs: stdout });
+    // Configuramos cabeceras para streaming agresivo
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Transfer-Encoding', 'chunked');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+
+    // ENVIAR PADDING INICIAL: Esto obliga al navegador a empezar a mostrar el contenido
+    // Algunos navegadores esperan a recibir ~1KB de datos para empezar a renderizar el stream
+    res.write(" ".repeat(1024) + "\n"); 
+    res.write("🚀 CONEXIÓN ESTABLECIDA: Iniciando motor de descarga...\n");
+    res.write("------------------------------------------------------------\n\n");
+
+    const child = spawn("node", ["facturasFinal.js", u, p, mes]);
+
+    child.stdout.on("data", (data) => {
+      // Convertimos a string y enviamos inmediatamente
+      res.write(data.toString());
+    });
+
+    child.stderr.on("data", (data) => {
+      res.write(`\n❌ ERROR EN PROCESO: ${data.toString()}`);
+    });
+
+    child.on("close", (code) => {
+      res.write(`\n\n✅ --- PROCESO FINALIZADO (Código: ${code}) ---`);
+      res.end();
     });
     
   } catch (error) {
-    res.status(500).json({ error: "Error al procesar la solicitud" });
+    console.error("Error en /api/descargar:", error);
+    res.status(500).write("Error interno del servidor al iniciar la descarga.");
+    res.end();
+  }
+});
+
+// Obtener proveedores de una cuenta específica
+app.get("/api/proveedores/:email", (req, res) => {
+  const email = req.params.email;
+  const PROVEEDORES_FILE = path.join(__dirname, "facturas", email, "proveedores.csv");
+
+  try {
+    if (!fs.existsSync(PROVEEDORES_FILE)) {
+      return res.json([]); // Si no existe, devolvemos lista vacía
+    }
+    const content = fs.readFileSync(PROVEEDORES_FILE, "utf8");
+    const lines = content.trim().split(/\r?\n/).filter(line => line.trim() !== "");
+    
+    if (lines.length === 0) return res.json([]);
+
+    const headers = lines[0].split(";");
+    
+    const data = lines.slice(1).map(line => {
+      const cols = line.split(";");
+      let obj = {};
+      headers.forEach((h, i) => {
+        const key = h.trim();
+        obj[key] = (cols[i] !== undefined) ? cols[i].trim() : "";
+      });
+      return obj;
+    });
+    
+    res.json(data);
+  } catch (error) {
+    console.error("Error al leer proveedores:", error);
+    res.status(500).json({ error: "Error al leer proveedores" });
+  }
+});
+
+// Guardar proveedores de una cuenta específica
+app.post("/api/proveedores/:email", (req, res) => {
+  const email = req.params.email;
+  const proveedores = req.body.proveedores;
+  const PROVEEDORES_FILE = path.join(__dirname, "facturas", email, "proveedores.csv");
+
+  try {
+    const cabecera = "Numero;Nombre;NombreComercial;Correo;Telefono;Contable\n";
+    const contenido = proveedores.map(p => 
+      `${p.Numero};${p.Nombre};${p.NombreComercial};${p.Correo};${p.Telefono};${p.Contable}`
+    ).join("\n");
+
+    fs.ensureDirSync(path.dirname(PROVEEDORES_FILE));
+    fs.writeFileSync(PROVEEDORES_FILE, cabecera + contenido, "utf8");
+    res.json({ mensaje: "Proveedores guardados correctamente" });
+  } catch (error) {
+    res.status(500).json({ error: "Error al guardar proveedores" });
   }
 });
 

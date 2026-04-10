@@ -197,11 +197,11 @@ async function leerXML(xmlBuffer) {
     let telefono = "";
 
     if (data.Emisor) {
-      proveedor = limpiarTexto(data.Emisor.Nombre || "");
+      proveedor = limpiarTexto(data.Emisor.Nombre || "").toUpperCase();
       if (data.Emisor.Identificacion) {
         cedula = data.Emisor.Identificacion.Numero || "";
       }
-      nombreComercial = limpiarTexto(data.Emisor.NombreComercial || "");
+      nombreComercial = limpiarTexto(data.Emisor.NombreComercial || "").toUpperCase();
       if (data.Emisor.CorreoElectronico) {
         if(Array.isArray(data.Emisor.CorreoElectronico)){
           correo = limpiarTexto(data.Emisor.CorreoElectronico[0]);
@@ -215,7 +215,7 @@ async function leerXML(xmlBuffer) {
     }
 
     if (tipoDocumento === "MensajeHacienda") {
-      proveedor = limpiarTexto(data.NombreEmisor || "");
+      proveedor = limpiarTexto(data.NombreEmisor || "").toUpperCase();
       cedula = data.NumeroCedulaEmisor || "";
     }
 
@@ -288,6 +288,8 @@ async function procesarAdjuntos(mail) {
   const fechaCorreo = moment(mail.date).format("DD/MM/YYYY");
   const emailOrigen = limpiarTexto(mail.from?.value?.[0]?.address || "desconocido");
 
+  console.log(`\n[${numeroCorreo}/${ESTADISTICAS.correosEncontrados}] 📧 Correo de: ${emailOrigen} (${fechaCorreo})`);
+
   ESTADISTICAS.correosProcesados++;
 
   let logCorreo = `\n-----------------------------------------------------\n`;
@@ -295,6 +297,7 @@ async function procesarAdjuntos(mail) {
   logCorreo += `-----------------------------------------------------\n`;
 
   if (!mail.attachments || mail.attachments.length === 0) {
+    console.log(`   ⚠️  Sin adjuntos. Omitiendo.`);
     ESTADISTICAS.noProcesados++;
     registrarMotivo("Sin adjuntos");
     logCorreo += `Estado: NO PROCESADO - Motivo: Sin adjuntos\n`;
@@ -327,16 +330,20 @@ async function procesarAdjuntos(mail) {
       const datos = await leerXML(attachment.content);
       if (!datos) {
         statusAdjunto = `ERROR: No se pudo leer XML`;
+        console.log(`   ❌ XML: ${nombre} -> Error de lectura`);
       } else if (datos.tipoDocumento === "MensajeHacienda") {
         statusAdjunto = `Identificado (Respuesta Hacienda)`;
+        console.log(`   ℹ️  XML: ${nombre} -> Respuesta de Hacienda`);
       } else {
         totalXMLEncontrados++;
         if (XML_PROCESADOS.has(datos.clave)) {
           const orig = XML_PROCESADOS.get(datos.clave);
           statusAdjunto = `OMITIDO (Duplicado) - Clave: ${datos.clave}`;
+          console.log(`   🟡 XML: ${nombre} -> DUPLICADO (Ya procesado)`);
           if (!primerDuplicadoInfo) primerDuplicadoInfo = orig;
         } else {
           statusAdjunto = `Procesado (XML) - Clave: ${datos.clave}`;
+          console.log(`   ✅ XML: ${nombre} -> NUEVO DOCUMENTO (${datos.tipoDocumento})`);
           if (!xmlPrincipal) {
             xmlPrincipal = true;
             proveedor = datos.proveedor;
@@ -344,7 +351,6 @@ async function procesarAdjuntos(mail) {
             tipoDocumento = datos.tipoDocumento;
             clave = datos.clave;
             
-            // Guardamos quién procesó esta clave por primera vez
             XML_PROCESADOS.set(datos.clave, {
               numero: numeroCorreo,
               fecha: fechaCorreo,
@@ -369,6 +375,7 @@ async function procesarAdjuntos(mail) {
       }
     } else if (nombreLower.endsWith(".pdf")) {
       statusAdjunto = `Identificado (PDF)`;
+      console.log(`   📄 PDF: ${nombre}`);
     } else if (EXT_IMAGENES.some(ext => nombreLower.endsWith(ext))) {
       statusAdjunto = `Ignorado (Imagen/Logo)`;
     } else {
@@ -384,6 +391,7 @@ async function procesarAdjuntos(mail) {
     registrarMotivo("Correo duplicado (Claves ya procesadas)");
     const d = primerDuplicadoInfo;
     let ref = d.esHistorial ? `@${d.ruta}` : `- CORREO # ${d.numero} - ${d.fecha} - ${d.email}`;
+    console.log(`   🚫 Omitiendo correo completo por duplicidad.`);
     logCorreo += `Estado: NO PROCESADO - Motivo: Duplicado - CORREO # ${numeroCorreo} - ${fechaCorreo} - ${emailOrigen} ${ref}\n`;
     logCorreo += `-----------------------------------------------------\n`;
     LOG.push(logCorreo);
@@ -395,6 +403,7 @@ async function procesarAdjuntos(mail) {
   if (!xmlPrincipal) {
     ESTADISTICAS.noProcesados++;
     registrarMotivo("Sin XML válido");
+    console.log(`   ⚠️  No se encontró ningún XML de factura válido.`);
     logCorreo += `Estado: NO PROCESADO - Sin XML válido\n`;
     logCorreo += `-----------------------------------------------------\n`;
     guardarAdjuntosCorreo(numeroCorreo, emailOrigen, fechaCorreo, mail.attachments);
@@ -406,7 +415,7 @@ async function procesarAdjuntos(mail) {
 
   const tipoContable = obtenerTipoContable(cedula);
   const carpetaProveedor = `${proveedor}_${cedula}-${emailOrigen}`;
-  logCorreo += `Destino: ${tipoContable} / ${carpetaProveedor}\n`;
+  console.log(`   📂 Clasificado como: ${tipoContable} -> ${proveedor}`);
 
   for (let attachment of mail.attachments) {
     if (!attachment.filename) continue;
@@ -423,6 +432,7 @@ async function procesarAdjuntos(mail) {
     if (!fs.existsSync(filePath)) {
       fs.writeFileSync(filePath, attachment.content);
       logCorreo += `  [Guardado] ${tipoArchivo}: ${attachment.filename}\n`;
+      console.log(`   💾 Guardado: ${tipoArchivo} en carpeta del proveedor.`);
     } else {
       logCorreo += `  [Ya existe] ${tipoArchivo}: ${attachment.filename}\n`;
     }
@@ -431,10 +441,12 @@ async function procesarAdjuntos(mail) {
       const resContable = await guardarXMLContable(attachment, tipoContable);
       if (resContable && resContable !== "EXISTE" && resContable !== "ERROR") {
         logCorreo += `  [Copia Contable] ${attachment.filename}\n`;
+        console.log(`   💾 Copia Contable creada.`);
       }
     }
   }
 
+  console.log(`   ✨ Procesado exitosamente.`);
   logCorreo += `Estado: PROCESADO EXITOSAMENTE\n`;
   logCorreo += `-----------------------------------------------------\n`;
   LOG.push(logCorreo);
@@ -451,16 +463,30 @@ function verificarFin(){
 }
 
 function buscarCorreos() {
+  console.log(`\n🔍 Buscando correos desde ${sinceDate} hasta ${beforeDate}...`);
   imap.search([["SINCE", sinceDate], ["BEFORE", beforeDate]], (err, results) => {
-    if (err) { console.log("Error búsqueda:", err); return; }
+    if (err) { console.log("❌ Error en la búsqueda:", err); return; }
+    
     ESTADISTICAS.correosEncontrados = results.length;
     correosPendientes = results.length;
-    if (!results.length) { console.log("No hay correos"); imap.end(); return; }
+    
+    if (!results.length) { 
+      console.log("ℹ️  No se encontraron correos en este periodo."); 
+      imap.end(); 
+      return; 
+    }
+    
+    console.log(`✅ Se encontraron ${results.length} correos. Iniciando descarga y procesamiento...\n`);
+    
     const f = imap.fetch(results, { bodies: "" });
-    f.on("message", (msg) => {
+    f.on("message", (msg, seqno) => {
+      console.log(`📥 [${seqno}] Obteniendo datos del servidor de correo...`);
       msg.on("body", (stream) => {
         simpleParser(stream, async (err, mail) => {
-          if (err) return;
+          if (err) {
+            console.log(`   ❌ Error al leer contenido del correo #${seqno}`);
+            return;
+          }
           await procesarAdjuntos(mail);
         });
       });
@@ -473,7 +499,9 @@ function buscarCorreos() {
 }
 
 function generarLog() {
+  console.log("\n🏁 Proceso de descarga finalizado. Generando resumen...");
   const ruta = `${BASE_PATH}/${yearActual}/${mesBuscar}/Adjuntos`;
+  // ... resto de la función ...
   fs.ensureDirSync(ruta);
   let resumen = "=====================================================\n";
   resumen += "RESUMEN DEL PROCESO\n";
@@ -489,9 +517,14 @@ function generarLog() {
   for (let m in ESTADISTICAS.motivos) resumen += `- ${m}: ${ESTADISTICAS.motivos[m]}\n`;
   resumen += "\nTipos detectados:\n";
   for (let t in ESTADISTICAS.tipos) resumen += `- ${t}: ${ESTADISTICAS.tipos[t]}\n`;
-  resumen += "=====================================================\n\n";
-  resumen += "DETALLE POR CORREO:\n";
+  resumen += "=====================================================\n";
+  
+  // Imprimir en consola
+  console.log("\n" + resumen);
+  
+  resumen += "\nDETALLE POR CORREO:\n";
   fs.writeFileSync(`${ruta}/log.txt`, resumen + LOG.join(""), "utf8");
+  console.log(`Log completo guardado en: ${ruta}/log.txt\n`);
 }
 
 imap.once("ready", async () => {

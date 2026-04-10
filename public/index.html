@@ -3,150 +3,351 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Multicuenta Facturas</title>
+    <title>Sistema de Facturas - Dashboard</title>
     <style>
         :root {
-            --primary: #2563eb;
-            --bg: #f1f5f9;
-            --card: #ffffff;
-            --text: #0f172a;
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --light: #ecf0f1;
+            --white: #ffffff;
+            --dark: #212529;
+            --success: #27ae60;
         }
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-        }
-        .dashboard {
-            background-color: var(--card);
-            padding: 3rem;
-            border-radius: 1.5rem;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            width: 100%;
-            max-width: 550px;
-            text-align: center;
-        }
-        h1 { color: var(--primary); font-size: 1.8rem; margin-bottom: 2rem; font-weight: 800; }
-        .form-group { margin-bottom: 1.5rem; text-align: left; }
-        label { display: block; margin-bottom: 0.6rem; font-weight: 600; font-size: 0.9rem; color: #475569; }
-        select {
-            width: 100%;
-            padding: 0.85rem;
-            border: 2px solid #e2e8f0;
-            border-radius: 0.75rem;
-            font-size: 1rem;
-            transition: border-color 0.2s;
-            cursor: pointer;
-        }
-        select:focus { outline: none; border-color: var(--primary); }
-        button {
-            width: 100%;
-            padding: 1rem;
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body { background-color: var(--light); display: flex; flex-direction: column; min-height: 100vh; }
+
+        /* Navbar Responsiva */
+        nav {
             background-color: var(--primary);
-            color: white;
+            color: var(--white);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .logo { font-size: 1.5rem; font-weight: bold; }
+
+        .menu-toggle { display: none; cursor: pointer; font-size: 1.5rem; }
+
+        .nav-links { display: flex; list-style: none; }
+
+        .nav-links li { margin-left: 1.5rem; }
+
+        .nav-links a {
+            color: var(--white);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+
+        .nav-links a:hover, .nav-links a.active { background-color: var(--accent); }
+
+        /* Contenido Principal */
+        main { padding: 2rem; flex: 1; max-width: 1200px; margin: 0 auto; width: 100%; }
+
+        .section { display: none; }
+        .section.active { display: block; animation: fadeIn 0.3s ease-in; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Estilos de Tarjetas */
+        .card {
+            background: var(--white);
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
+        }
+
+        h2 { margin-bottom: 1.5rem; color: var(--primary); }
+
+        /* Formulario y Controles */
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+        select, input {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        button {
+            padding: 0.8rem 1.5rem;
             border: none;
-            border-radius: 0.75rem;
-            font-size: 1.1rem;
-            font-weight: 700;
+            border-radius: 4px;
+            background-color: var(--accent);
+            color: white;
             cursor: pointer;
-            transition: all 0.2s;
+            font-size: 1rem;
+            transition: 0.3s;
+        }
+
+        button:hover { background-color: #2980b9; }
+
+        button.success { background-color: var(--success); }
+
+        /* Tabla Estilo Excel */
+        .table-container { overflow-x: auto; margin-top: 1rem; border: 1px solid #ddd; border-radius: 4px; }
+
+        table { width: 100%; border-collapse: collapse; background: white; min-width: 800px; }
+
+        th { background: var(--primary); color: white; text-align: left; padding: 1rem; position: sticky; top: 0; }
+
+        td { padding: 0.5rem; border-bottom: 1px solid #eee; }
+
+        tr:hover { background-color: #f9f9f9; }
+
+        .excel-input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            padding: 0.5rem;
+        }
+
+        .excel-input:focus { background: #fff; outline: 2px solid var(--accent); }
+
+        /* Logs */
+        #logs {
+            background: #212529;
+            color: #00ff00;
+            padding: 1rem;
+            border-radius: 4px;
+            font-family: monospace;
+            height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
             margin-top: 1rem;
+            border: 1px solid #444;
         }
-        button:hover { background-color: #1d4ed8; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3); }
-        button:disabled { background-color: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
-        #status {
-            margin-top: 2rem;
-            padding: 1.25rem;
-            border-radius: 0.75rem;
+
+        /* Barra de Progreso */
+        .progress-container {
+            width: 100%;
+            background-color: #ddd;
+            border-radius: 8px;
+            margin: 1.5rem 0;
             display: none;
-            font-size: 0.95rem;
-            line-height: 1.5;
-            text-align: left;
+            overflow: hidden;
+            height: 25px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
         }
-        .success { background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
-        .error { background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-        .spinner { display: inline-block; width: 1.2rem; height: 1.2rem; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s linear infinite; margin-right: 0.5rem; vertical-align: middle; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: var(--success);
+            text-align: center;
+            line-height: 25px;
+            color: white;
+            font-weight: bold;
+            transition: width 0.4s ease;
+        }
+
+        /* Mensajes */
+        .status { padding: 1rem; border-radius: 4px; margin-top: 1rem; display: none; }
+        .status.info { background: #d1ecf1; color: #0c5460; display: block; }
+        .status.success { background: #d4edda; color: #155724; display: block; }
+        .status.error { background: #f8d7da; color: #721c24; display: block; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+                flex-direction: column;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                width: 100%;
+                background: var(--primary);
+                padding: 1rem;
+            }
+            .nav-links.show { display: flex; }
+            .nav-links li { margin: 0.5rem 0; }
+            .menu-toggle { display: block; }
+            main { padding: 1rem; }
+        }
     </style>
 </head>
 <body>
-    <div class="dashboard">
-        <h1>Sistema de Descargas</h1>
-        
-        <div class="form-group">
-            <label for="email">Seleccionar Cuenta de Correo</label>
-            <select id="email"></select>
-        </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div class="form-group">
-                <label for="mes">Mes</label>
-                <select id="mes">
-                    <option value="01">Enero</option>
-                    <option value="02">Febrero</option>
-                    <option value="03">Marzo</option>
-                    <option value="04">Abril</option>
-                    <option value="05">Mayo</option>
-                    <option value="06">Junio</option>
-                    <option value="07">Julio</option>
-                    <option value="08">Agosto</option>
-                    <option value="09">Septiembre</option>
-                    <option value="10">Octubre</option>
-                    <option value="11">Noviembre</option>
-                    <option value="12">Diciembre</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="anio">Año</label>
-                <select id="anio">
-                    <option value="2026">2026</option>
-                    <option value="2025">2025</option>
-                </select>
+    <nav>
+        <div class="logo">Facturas CR</div>
+        <div class="menu-toggle" onclick="toggleMenu()">☰</div>
+        <ul class="nav-links" id="navLinks">
+            <li><a href="#" onclick="showSection('inicio')" id="link-inicio">Inicio</a></li>
+            <li><a href="#" onclick="showSection('sistema')" id="link-sistema">Sistema</a></li>
+            <li><a href="#" onclick="showSection('proveedores')" id="link-proveedores">Proveedores</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <!-- SECCION INICIO -->
+        <div id="inicio" class="section active">
+            <div class="card">
+                <h2>Bienvenido al Sistema de Descargas</h2>
+                <p>Este sistema le permite automatizar el procesamiento de facturas electrónicas de forma segura y eficiente.</p>
+                <p style="margin-top: 1rem;">Use el menú superior para navegar:</p>
+                <ul style="margin: 1rem 2rem;">
+                    <li><strong>Sistema:</strong> Descarga de facturas desde su correo.</li>
+                    <li><strong>Proveedores:</strong> Edición y clasificación contable de sus emisores.</li>
+                </ul>
             </div>
         </div>
 
-        <button id="btnDescargar" onclick="iniciarDescarga()">Iniciar Descarga de Facturas</button>
-        
-        <div id="status"></div>
-    </div>
+        <!-- SECCION SISTEMA -->
+        <div id="sistema" class="section">
+            <div class="card">
+                <h2>Descarga de Facturas</h2>
+                <div class="form-group">
+                    <label>Seleccionar Cuenta:</label>
+                    <select id="cuenta-descarga"></select>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Mes (01-12):</label>
+                        <input type="number" id="mes" min="1" max="12">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Año:</label>
+                        <input type="number" id="anio">
+                    </div>
+                </div>
+                <button onclick="iniciarDescarga()">Iniciar Proceso de Descarga</button>
+                
+                <div class="progress-container" id="progreso-contenedor">
+                    <div class="progress-bar" id="progreso-barra">0%</div>
+                </div>
+
+                <div id="status-descarga" class="status"></div>
+                <div id="logs" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- SECCION PROVEEDORES -->
+        <div id="proveedores" class="section">
+            <div class="card">
+                <h2>Gestión de Proveedores</h2>
+                <div class="form-group">
+                    <label>Seleccionar Cuenta para cargar proveedores:</label>
+                    <select id="cuenta-proveedores" onchange="cargarProveedores()"></select>
+                </div>
+                
+                <!-- Botones al inicio -->
+                <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem;">
+                    <button class="success" onclick="guardarProveedores()">Guardar Cambios</button>
+                    <button style="background: var(--secondary);" onclick="cargarProveedores()">Recargar Datos</button>
+                </div>
+
+                <p>Edite directamente los campos en la tabla. Los cambios no se guardarán hasta que pulse "Guardar Cambios".</p>
+                
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label>Buscar Proveedor (Cédula, Nombre, Correo o Teléfono):</label>
+                    <input type="text" id="busqueda-proveedor" placeholder="Escriba para filtrar..." onkeyup="filtrarProveedores()">
+                </div>
+
+                <div class="table-container">
+                    <table id="tabla-proveedores">
+                        <thead>
+                            <tr>
+                                <th>Cédula (Número)</th>
+                                <th>Nombre</th>
+                                <th>Nombre Comercial</th>
+                                <th>Correo</th>
+                                <th>Teléfono</th>
+                                <th>Contable (C/G/CV)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="body-proveedores">
+                            <!-- Datos dinámicos -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Botones al final -->
+                <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+                    <button class="success" onclick="guardarProveedores()">Guardar Cambios</button>
+                    <button style="background: var(--secondary);" onclick="cargarProveedores()">Recargar Datos</button>
+                </div>
+                <div id="status-proveedores" class="status"></div>
+            </div>
+        </div>
+    </main>
 
     <script>
-        const statusEl = document.getElementById('status');
-        const btn = document.getElementById('btnDescargar');
-        const emailSelect = document.getElementById('email');
+        let accounts = [];
 
-        async function loadConfig() {
+        function toggleMenu() {
+            document.getElementById('navLinks').classList.toggle('show');
+        }
+
+        function showSection(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+            
+            document.getElementById(id).classList.add('active');
+            document.getElementById('link-' + id).classList.add('active');
+            
+            if (window.innerWidth <= 768) toggleMenu();
+
+            if(id === 'proveedores' && accounts.length > 0) {
+                cargarProveedores();
+            }
+        }
+
+        async function init() {
             try {
-                const response = await fetch('/api/config');
-                const data = await response.json();
+                const res = await fetch('/api/config');
+                const data = await res.json();
+                accounts = data.accounts;
                 
-                emailSelect.innerHTML = data.accounts.map(acc => 
-                    `<option value="${acc.email}">${acc.email}</option>`
-                ).join('');
+                const selectDescarga = document.getElementById('cuenta-descarga');
+                const selectProv = document.getElementById('cuenta-proveedores');
+                
+                accounts.forEach(acc => {
+                    const opt = `<option value="${acc.email}">${acc.email}</option>`;
+                    selectDescarga.innerHTML += opt;
+                    selectProv.innerHTML += opt;
+                });
 
-                if(data.accounts.length > 0) {
-                    document.getElementById('mes').value = data.accounts[0].mesDefault || '01';
-                }
+                document.getElementById('mes').value = accounts[0]?.mesDefault || '01';
                 document.getElementById('anio').value = data.anioActual;
-            } catch (error) {
-                console.error('Error cargando config:', error);
+
+            } catch (err) {
+                console.error("Error al iniciar:", err);
             }
         }
 
         async function iniciarDescarga() {
-            const email = emailSelect.value;
+            const email = document.getElementById('cuenta-descarga').value;
             const mes = document.getElementById('mes').value;
             const anio = document.getElementById('anio').value;
+            const status = document.getElementById('status-descarga');
+            const logsDiv = document.getElementById('logs');
+            const progContenedor = document.getElementById('progreso-contenedor');
+            const progBarra = document.getElementById('progreso-barra');
 
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span> Procesando Descarga...';
-            statusEl.style.display = 'block';
-            statusEl.className = 'success';
-            statusEl.innerHTML = `<strong>Iniciando...</strong><br>Conectando a la cuenta: ${email}<br>Buscando facturas de: ${mes}/${anio}`;
+            // Resetear interfaz
+            status.className = 'status info';
+            status.innerText = "Conectando y analizando correos...";
+            status.style.display = 'block';
+            
+            logsDiv.style.display = 'none'; // Ocultar logs al inicio
+            logsDiv.textContent = ""; 
+            
+            progContenedor.style.display = 'block'; // Mostrar barra
+            progBarra.style.width = '0%';
+            progBarra.innerText = '0%';
 
             try {
                 const response = await fetch('/api/descargar', {
@@ -154,26 +355,145 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, mes, anio })
                 });
+
+                if (!response.ok) throw new Error("Error en el servidor");
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
                 
-                const data = await response.json();
-                
-                if (response.ok) {
-                    statusEl.className = 'success';
-                    statusEl.innerHTML = `<strong>¡Éxito!</strong><br>Las facturas han sido descargadas y organizadas en:<br><i>Facturas/${email}/${anio}/${mes}/</i>`;
-                } else {
-                    statusEl.className = 'error';
-                    statusEl.innerHTML = `<strong>Error en el proceso</strong><br>${data.detalle || data.error}`;
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value, { stream: true });
+                    logsDiv.textContent += chunk;
+
+                    // BUSCAR PROGRESO [X/Y]
+                    const match = chunk.match(/\[(\d+)\/(\d+)\]/);
+                    if (match) {
+                        const actual = parseInt(match[1]);
+                        const total = parseInt(match[2]);
+                        const porcentaje = Math.round((actual / total) * 100);
+                        
+                        progBarra.style.width = porcentaje + '%';
+                        progBarra.innerText = porcentaje + '%';
+                        status.innerText = `Procesando correo ${actual} de ${total}...`;
+                    }
+                    logsDiv.scrollTop = logsDiv.scrollHeight;
                 }
-            } catch (error) {
-                statusEl.className = 'error';
-                statusEl.innerHTML = `<strong>Error de Red</strong><br>No se pudo contactar con el servidor local.`;
-            } finally {
-                btn.disabled = false;
-                btn.innerText = 'Iniciar Descarga de Facturas';
+
+                progBarra.style.width = '100%';
+                progBarra.innerText = '100%';
+                status.className = 'status success';
+                status.innerText = "¡Descarga y clasificación completada!";
+                
+                logsDiv.style.display = 'block';
+                progContenedor.style.display = 'none'; 
+
+            } catch (err) {
+                status.className = 'status error';
+                status.innerText = "Error: " + err.message;
+                progContenedor.style.display = 'none';
+                logsDiv.style.display = 'block';
+                logsDiv.textContent += "\n\n❌ ERROR: " + err.message;
             }
         }
 
-        loadConfig();
+        async function cargarProveedores() {
+            const email = document.getElementById('cuenta-proveedores').value;
+            const body = document.getElementById('body-proveedores');
+            body.innerHTML = '<tr><td colspan="6" style="text-align:center">Cargando...</td></tr>';
+
+            try {
+                const res = await fetch(`/api/proveedores/${email}`);
+                const data = await res.json();
+                
+                body.innerHTML = '';
+                if(data.length === 0) {
+                    body.innerHTML = '<tr><td colspan="6" style="text-align:center">No hay proveedores registrados para esta cuenta.</td></tr>';
+                    return;
+                }
+
+                data.forEach((p, index) => {
+                    const row = `
+                        <tr>
+                            <td><input class="excel-input" type="text" value="${p.Numero}" data-key="Numero" data-index="${index}"></td>
+                            <td><input class="excel-input" type="text" value="${p.Nombre}" data-key="Nombre" data-index="${index}"></td>
+                            <td><input class="excel-input" type="text" value="${p.NombreComercial}" data-key="NombreComercial" data-index="${index}"></td>
+                            <td><input class="excel-input" type="text" value="${p.Correo}" data-key="Correo" data-index="${index}"></td>
+                            <td><input class="excel-input" type="text" value="${p.Telefono}" data-key="Telefono" data-index="${index}"></td>
+                            <td><input class="excel-input" type="text" value="${p.Contable}" data-key="Contable" data-index="${index}" placeholder="C / G / CV"></td>
+                        </tr>
+                    `;
+                    body.innerHTML += row;
+                });
+            } catch (err) {
+                body.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red">Error al cargar datos.</td></tr>';
+            }
+        }
+
+        async function guardarProveedores() {
+            const email = document.getElementById('cuenta-proveedores').value;
+            const inputs = document.querySelectorAll('#body-proveedores .excel-input');
+            const status = document.getElementById('status-proveedores');
+            
+            let proveedores = [];
+            let currentIdx = -1;
+            let currentObj = {};
+
+            inputs.forEach(input => {
+                const idx = parseInt(input.dataset.index);
+                const key = input.dataset.key;
+                
+                if (idx !== currentIdx) {
+                    if (currentIdx !== -1) proveedores.push(currentObj);
+                    currentIdx = idx;
+                    currentObj = {};
+                }
+                currentObj[key] = input.value;
+            });
+            if (currentIdx !== -1) proveedores.push(currentObj);
+
+            try {
+                const res = await fetch(`/api/proveedores/${email}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ proveedores })
+                });
+                const data = await res.json();
+                status.className = 'status success';
+                status.innerText = data.mensaje;
+                status.style.display = 'block';
+                setTimeout(() => { status.style.display = 'none'; }, 3000);
+            } catch (err) {
+                status.className = 'status error';
+                status.innerText = "Error al guardar los cambios.";
+                status.style.display = 'block';
+            }
+        }
+
+        function filtrarProveedores() {
+            const busqueda = document.getElementById('busqueda-proveedor').value.toLowerCase().trim();
+            const filas = document.querySelectorAll('#body-proveedores tr');
+
+            filas.forEach(fila => {
+                const inputs = fila.querySelectorAll('.excel-input');
+                let textoFila = "";
+                inputs.forEach(input => {
+                    textoFila += " " + input.value.toLowerCase();
+                });
+
+                if (textoFila.includes(busqueda)) {
+                    fila.style.display = '';
+                } else {
+                    fila.style.display = 'none';
+                }
+            });
+        }
+
+        // Iniciar
+        init();
+        document.getElementById('link-inicio').classList.add('active');
     </script>
 </body>
 </html>
